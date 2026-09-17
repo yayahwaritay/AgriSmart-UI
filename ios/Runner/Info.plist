@@ -8,6 +8,10 @@
 	<string>AgriSmart needs camera access to photograph plants for pest and disease scanning.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>AgriSmart needs photo library access to select existing plant photos for scanning.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>AgriSmart uses Face ID to sign you in securely without typing your password.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AgriSmart uses your location to improve the accuracy of plant scan results for crops and pests common in your area.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

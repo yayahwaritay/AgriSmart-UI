@@ -3,20 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../services/diagnosis_service.dart';
-import '../../../services/mock_diagnosis_service.dart';
-import '../data/repositories/diagnosis_repository_impl.dart';
+import '../../../core/location/device_location.dart';
+import '../../history/application/history_providers.dart';
 import '../domain/entities/diagnosis_result.dart';
-import '../domain/repositories/diagnosis_repository.dart';
-
-/// The one line to change when swapping in a real inference backend.
-final diagnosisServiceProvider = Provider<DiagnosisService>((ref) {
-  return MockDiagnosisService();
-});
-
-final diagnosisRepositoryProvider = Provider<DiagnosisRepository>((ref) {
-  return DiagnosisRepositoryImpl(ref.watch(diagnosisServiceProvider));
-});
 
 enum ScanStatus { idle, captured, diagnosing, success, error }
 
@@ -57,14 +46,22 @@ class ScanController extends Notifier<ScanState> {
     state = ScanState(status: ScanStatus.captured, image: image);
   }
 
+  /// Diagnoses and saves the captured image in one call — `POST /scans`,
+  /// see README.mobile.md — sending the device's location when available to
+  /// improve accuracy.
   Future<void> runDiagnosis() async {
     final image = state.image;
     if (image == null) return;
 
     state = state.copyWith(status: ScanStatus.diagnosing);
     try {
-      final result = await ref.read(diagnosisRepositoryProvider).diagnosePlant(image);
-      state = state.copyWith(status: ScanStatus.success, result: result);
+      final coordinates = await ref.read(deviceLocationProvider).current();
+      final scan = await ref.read(scanHistoryProvider.notifier).addScan(
+            image,
+            latitude: coordinates?.$1,
+            longitude: coordinates?.$2,
+          );
+      state = state.copyWith(status: ScanStatus.success, result: scan.diagnosis);
     } catch (e) {
       state = state.copyWith(status: ScanStatus.error, errorMessage: e.toString());
     }

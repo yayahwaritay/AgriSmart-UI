@@ -10,17 +10,23 @@ import '../widgets/product_card.dart';
 class MarketScreen extends ConsumerWidget {
   const MarketScreen({super.key});
 
-  void _addToCart(BuildContext context, WidgetRef ref, MarketProduct product) {
-    ref.read(cartProvider.notifier).add(product.id);
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 1),
-          content: Text('${product.name} added to cart'),
-        ),
-      );
+  Future<void> _addToCart(BuildContext context, WidgetRef ref, MarketProduct product) async {
+    try {
+      await ref.read(cartProvider.notifier).add(product.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+            content: Text('${product.name} added to cart'),
+          ),
+        );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   @override
@@ -28,6 +34,7 @@ class MarketScreen extends ConsumerWidget {
     final colors = context.agriColors;
     final products = ref.watch(filteredProductsProvider);
     final filter = ref.watch(marketFilterProvider);
+    final categories = ref.watch(marketCategoriesProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -58,22 +65,26 @@ class MarketScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             SizedBox(
               height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  _CategoryChip(
-                    label: 'All',
-                    selected: filter == null,
-                    onTap: () => ref.read(marketFilterProvider.notifier).select(null),
-                  ),
-                  for (final category in ProductCategory.values)
+              child: categories.when(
+                data: (items) => ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
                     _CategoryChip(
-                      label: category.label,
-                      selected: filter == category,
-                      onTap: () => ref.read(marketFilterProvider.notifier).select(category),
+                      label: 'All',
+                      selected: filter == null,
+                      onTap: () => ref.read(marketFilterProvider.notifier).select(null),
                     ),
-                ],
+                    for (final category in items)
+                      _CategoryChip(
+                        label: category.name,
+                        selected: filter == category.id,
+                        onTap: () => ref.read(marketFilterProvider.notifier).select(category.id),
+                      ),
+                  ],
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (e, _) => const SizedBox.shrink(),
               ),
             ),
             const SizedBox(height: 4),

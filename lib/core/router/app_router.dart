@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/application/auth_providers.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/market/presentation/screens/market_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -15,11 +19,45 @@ import 'app_shell.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Bridges Riverpod's [authControllerProvider] to go_router's
+/// `refreshListenable`, so a login/logout (including a 401-triggered
+/// `forceLogout`) re-runs [GoRouter.redirect] even when nothing navigated.
+class _AuthRefreshNotifier extends ChangeNotifier {
+  _AuthRefreshNotifier(Ref ref) {
+    ref.listen(authControllerProvider, (previous, next) {
+      if (previous?.status != next.status) notifyListeners();
+    });
+  }
+}
+
+const _publicLocations = {'/login', '/register'};
+
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final refreshNotifier = _AuthRefreshNotifier(ref);
+
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: '/',
+    initialLocation: '/splash',
+    refreshListenable: refreshNotifier,
+    redirect: (context, state) {
+      final authState = ref.read(authControllerProvider);
+      final location = state.matchedLocation;
+
+      if (authState.status == AuthStatus.unknown) {
+        return location == '/splash' ? null : '/splash';
+      }
+
+      final loggedIn = authState.status == AuthStatus.authenticated;
+      final onPublicScreen = _publicLocations.contains(location);
+
+      if (!loggedIn && !onPublicScreen) return '/login';
+      if (loggedIn && (onPublicScreen || location == '/splash')) return '/';
+      return null;
+    },
     routes: [
+      GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => AppShell(navigationShell: navigationShell),
         branches: [

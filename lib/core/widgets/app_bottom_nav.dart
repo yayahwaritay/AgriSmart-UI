@@ -29,14 +29,15 @@ class AppBottomNav extends StatelessWidget {
           borderRadius: 28,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               for (var i = 0; i < items.length; i++)
-                _NavItem(
-                  item: items[i],
-                  selected: i == currentIndex,
-                  color: colors.primary,
-                  onTap: () => onTap(i),
+                Expanded(
+                  child: _NavItem(
+                    item: items[i],
+                    selected: i == currentIndex,
+                    color: colors.primary,
+                    onTap: () => onTap(i),
+                  ),
                 ),
             ],
           ),
@@ -62,7 +63,7 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.16) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -77,6 +78,8 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: context.textTheme.labelSmall?.copyWith(
                 color: selected ? color : colors.textSecondary,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,

@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/repositories/dummy_tutorial_repository.dart';
+import '../../../core/network/api_client.dart';
+import '../data/repositories/http_tutorial_repository.dart';
 import '../domain/entities/tutorial_video.dart';
 import '../domain/entities/video_comment.dart';
 import '../domain/repositories/tutorial_repository.dart';
 
 final tutorialRepositoryProvider = Provider<TutorialRepository>((ref) {
-  return DummyTutorialRepository();
+  return HttpTutorialRepository(ref.watch(apiClientProvider));
 });
 
 class TutorialVideoList extends AsyncNotifier<List<TutorialVideo>> {

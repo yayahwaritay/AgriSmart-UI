@@ -22,7 +22,20 @@ class ProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(product.emoji, style: const TextStyle(fontSize: 30)),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: double.infinity,
+              height: 64,
+              child: product.imageUrl != null
+                  ? Image.network(
+                      product.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => _ProductImageFallback(color: colors.primary),
+                    )
+                  : _ProductImageFallback(color: colors.primary),
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
             product.name,
@@ -32,7 +45,7 @@ class ProductCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            product.seller,
+            product.sellerName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: context.textTheme.labelSmall?.copyWith(color: colors.textSecondary),
@@ -85,6 +98,20 @@ class _AddButton extends StatelessWidget {
           child: Icon(Icons.add_rounded, size: 20, color: onPrimary),
         ),
       ),
+    );
+  }
+}
+
+class _ProductImageFallback extends StatelessWidget {
+  const _ProductImageFallback({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: color.withValues(alpha: 0.12),
+      child: Center(child: Icon(Icons.eco_rounded, color: color, size: 26)),
     );
   }
 }

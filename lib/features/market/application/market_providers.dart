@@ -1,86 +1,110 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/repositories/in_memory_market_repository.dart';
+import '../../../core/network/api_client.dart';
+import '../data/repositories/http_cart_repository.dart';
+import '../data/repositories/http_category_repository.dart';
+import '../data/repositories/http_market_repository.dart';
+import '../domain/entities/cart.dart';
+import '../domain/entities/market_category.dart';
 import '../domain/entities/market_product.dart';
+import '../domain/entities/order.dart';
+import '../domain/repositories/cart_repository.dart';
+import '../domain/repositories/category_repository.dart';
 import '../domain/repositories/market_repository.dart';
 
 final marketRepositoryProvider = Provider<MarketRepository>((ref) {
-  return InMemoryMarketRepository();
+  return HttpMarketRepository(ref.watch(apiClientProvider));
+});
+
+final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
+  return HttpCategoryRepository(ref.watch(apiClientProvider));
+});
+
+final cartRepositoryProvider = Provider<CartRepository>((ref) {
+  return HttpCartRepository(ref.watch(apiClientProvider));
 });
 
 final marketProductsProvider = FutureProvider<List<MarketProduct>>((ref) {
   return ref.watch(marketRepositoryProvider).fetchAll();
 });
 
-/// `null` means "All" — drives the category chips on the Market screen.
-class MarketFilter extends Notifier<ProductCategory?> {
-  @override
-  ProductCategory? build() => null;
+final marketCategoriesProvider = FutureProvider<List<MarketCategory>>((ref) {
+  return ref.watch(categoryRepositoryProvider).fetchAll();
+});
 
-  void select(ProductCategory? category) => state = category;
+/// `null` means "All" — drives the category chips on the Market screen.
+/// Holds a category id.
+class MarketFilter extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void select(String? categoryId) => state = categoryId;
 }
 
-final marketFilterProvider = NotifierProvider<MarketFilter, ProductCategory?>(MarketFilter.new);
+final marketFilterProvider = NotifierProvider<MarketFilter, String?>(MarketFilter.new);
 
 final filteredProductsProvider = Provider<AsyncValue<List<MarketProduct>>>((ref) {
   final products = ref.watch(marketProductsProvider);
   final filter = ref.watch(marketFilterProvider);
   if (filter == null) return products;
   return products.whenData(
-    (items) => items.where((p) => p.category == filter).toList(),
+    (items) => items.where((p) => p.categoryId == filter).toList(),
   );
 });
 
-/// Product id → quantity. Kept as a plain map so the cart survives catalogue
-/// reloads and stays trivially serialisable later.
-class CartNotifier extends Notifier<Map<String, int>> {
+/// Cart, fetched from and mutated against the backend — see
+/// README.mobile.md's `/cart` endpoints. Every mutation re-fetches the cart
+/// afterwards rather than trusting the mutation response shape, which keeps
+/// this resilient to whatever each endpoint actually returns.
+class CartNotifier extends AsyncNotifier<Cart> {
   @override
-  Map<String, int> build() => const {};
-
-  void add(String productId) {
-    state = {...state, productId: (state[productId] ?? 0) + 1};
+  Future<Cart> build() {
+    return ref.watch(cartRepositoryProvider).fetchCart();
   }
 
-  void removeOne(String productId) {
-    final quantity = state[productId] ?? 0;
-    if (quantity <= 1) {
-      state = {...state}..remove(productId);
-    } else {
-      state = {...state, productId: quantity - 1};
+  Future<void> _mutate(Future<void> Function(CartRepository repo) action) async {
+    final repository = ref.read(cartRepositoryProvider);
+    try {
+      await action(repository);
+      state = AsyncData(await repository.fetchCart());
+    } catch (e, st) {
+      state = AsyncValue<Cart>.error(e, st);
+      rethrow;
     }
   }
 
-  void clear() => state = const {};
+  Future<void> add(String productId) => _mutate((repo) => repo.addItem(productId, 1));
+
+  Future<void> removeOne(String productId) async {
+    final items = state.value?.items ?? const [];
+    CartLine? line;
+    for (final item in items) {
+      if (item.productId == productId) line = item;
+    }
+    if (line == null) return;
+    final quantity = line.quantity;
+    await _mutate((repo) {
+      return quantity <= 1 ? repo.removeItem(productId) : repo.setQuantity(productId, quantity - 1);
+    });
+  }
+
+  Future<void> clear() => _mutate((repo) => repo.clearCart());
+
+  Future<Order> checkout() async {
+    final repository = ref.read(cartRepositoryProvider);
+    try {
+      final order = await repository.checkout();
+      state = AsyncData(await repository.fetchCart());
+      return order;
+    } catch (e, st) {
+      state = AsyncValue<Cart>.error(e, st);
+      rethrow;
+    }
+  }
 }
 
-final cartProvider = NotifierProvider<CartNotifier, Map<String, int>>(CartNotifier.new);
-
-/// A cart line joined with its catalogue product.
-class CartItem {
-  const CartItem({required this.product, required this.quantity});
-
-  final MarketProduct product;
-  final int quantity;
-
-  double get lineTotal => product.price * quantity;
-}
-
-/// Cart entries resolved against the loaded catalogue. Empty while the
-/// catalogue is still loading — the cart badge and sheet simply show nothing
-/// until products arrive.
-final cartItemsProvider = Provider<List<CartItem>>((ref) {
-  final cart = ref.watch(cartProvider);
-  final products = ref.watch(marketProductsProvider).value ?? const <MarketProduct>[];
-  return [
-    for (final product in products)
-      if (cart.containsKey(product.id)) CartItem(product: product, quantity: cart[product.id]!),
-  ];
-});
+final cartProvider = AsyncNotifierProvider<CartNotifier, Cart>(CartNotifier.new);
 
 final cartCountProvider = Provider<int>((ref) {
-  return ref.watch(cartProvider).values.fold(0, (sum, quantity) => sum + quantity);
-});
-
-final cartTotalProvider = Provider<double>((ref) {
-  return ref.watch(cartItemsProvider).fold(0, (sum, item) => sum + item.lineTotal);
+  return ref.watch(cartProvider).value?.itemCount ?? 0;
 });

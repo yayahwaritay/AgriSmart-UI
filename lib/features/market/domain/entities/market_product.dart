@@ -8,39 +8,31 @@ String formatNaira(double amount) {
     RegExp(r'\B(?=(\d{3})+(?!\d))'),
     (_) => ',',
   );
-  return '₦$grouped';
-}
-
-/// What a [MarketProduct] is sold as. `produce` is a harvested crop listed
-/// by a farmer; the other two are farm inputs.
-enum ProductCategory {
-  seeds('Seeds'),
-  fertilizer('Fertilizer'),
-  produce('Harvest');
-
-  const ProductCategory(this.label);
-
-  final String label;
+  return 'SLE$grouped';
 }
 
 /// A listing on the AgriSmart marketplace — seeds, fertilizer, or a
-/// harvested crop offered by a farmer.
+/// harvested crop offered by a farmer. Mirrors `MarketProductDto` from
+/// README.mobile.md.
 @immutable
 class MarketProduct {
   const MarketProduct({
     required this.id,
     required this.name,
-    required this.category,
+    required this.categoryId,
+    required this.categoryName,
     required this.price,
     required this.unit,
-    required this.seller,
-    required this.emoji,
+    required this.sellerId,
+    required this.sellerName,
     required this.description,
+    this.imageUrl,
   });
 
   final String id;
   final String name;
-  final ProductCategory category;
+  final String categoryId;
+  final String categoryName;
 
   /// Price in naira for one [unit].
   final double price;
@@ -48,11 +40,27 @@ class MarketProduct {
   /// What one purchase quantity means, e.g. "25 kg bag" or "crate".
   final String unit;
 
-  final String seller;
-  final String emoji;
+  final String sellerId;
+  final String sellerName;
   final String description;
+  final String? imageUrl;
 
   String get priceLabel => formatNaira(price);
+
+  factory MarketProduct.fromJson(Map<String, dynamic> json) {
+    return MarketProduct(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      categoryId: json['categoryId'] as String,
+      categoryName: json['categoryName'] as String,
+      price: (json['price'] as num).toDouble(),
+      unit: json['unit'] as String,
+      sellerId: json['sellerId'] as String,
+      sellerName: json['sellerName'] as String,
+      description: json['description'] as String,
+      imageUrl: json['imageUrl'] as String?,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>

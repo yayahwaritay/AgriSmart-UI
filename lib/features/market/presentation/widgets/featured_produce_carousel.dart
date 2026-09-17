@@ -8,7 +8,7 @@ import '../../../../core/widgets/neu_card.dart';
 import '../../application/market_providers.dart';
 import '../../domain/entities/market_product.dart';
 
-/// Horizontal rail of freshly harvested crops shown on the Home dashboard.
+/// Horizontal rail of marketplace listings shown on the Home dashboard.
 /// "Buy" adds straight to the cart; tapping a tile opens the Marketplace.
 class FeaturedProduceCarousel extends ConsumerWidget {
   const FeaturedProduceCarousel({super.key});
@@ -20,16 +20,16 @@ class FeaturedProduceCarousel extends ConsumerWidget {
 
     return products.when(
       data: (items) {
-        final produce = items.where((p) => p.category == ProductCategory.produce).take(5).toList();
-        if (produce.isEmpty) return const SizedBox.shrink();
+        final featured = items.take(5).toList();
+        if (featured.isEmpty) return const SizedBox.shrink();
         return SizedBox(
           height: 168,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
-            itemCount: produce.length,
+            itemCount: featured.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, index) => _ProduceTile(product: produce[index]),
+            itemBuilder: (context, index) => _ProduceTile(product: featured[index]),
           ),
         );
       },
@@ -44,6 +44,25 @@ class _ProduceTile extends ConsumerWidget {
 
   final MarketProduct product;
 
+  Future<void> _buy(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(cartProvider.notifier).add(product.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+            content: Text('${product.name} added to cart'),
+          ),
+        );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.agriColors;
@@ -56,7 +75,26 @@ class _ProduceTile extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(product.emoji, style: const TextStyle(fontSize: 26)),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: product.imageUrl != null
+                    ? Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) => ColoredBox(
+                          color: colors.primary.withValues(alpha: 0.12),
+                          child: Icon(Icons.eco_rounded, color: colors.primary, size: 20),
+                        ),
+                      )
+                    : ColoredBox(
+                        color: colors.primary.withValues(alpha: 0.12),
+                        child: Icon(Icons.eco_rounded, color: colors.primary, size: 20),
+                      ),
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
               product.name,
@@ -76,20 +114,7 @@ class _ProduceTile extends ConsumerWidget {
                 Expanded(
                   child: Text(product.priceLabel, style: AppTheme.dataReadout(colors, fontSize: 13)),
                 ),
-                _BuyPill(
-                  onTap: () {
-                    ref.read(cartProvider.notifier).add(product.id);
-                    ScaffoldMessenger.of(context)
-                      ..clearSnackBars()
-                      ..showSnackBar(
-                        SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 1),
-                          content: Text('${product.name} added to cart'),
-                        ),
-                      );
-                  },
-                ),
+                _BuyPill(onTap: () => _buy(context, ref)),
               ],
             ),
           ],

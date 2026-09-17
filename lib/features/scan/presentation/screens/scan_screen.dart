@@ -10,8 +10,6 @@ import '../../../../core/theme/build_context_x.dart';
 import '../../../../core/widgets/glass_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/scan_viewfinder.dart';
-import '../../../history/application/history_providers.dart';
-import '../../../scan/domain/entities/plant_scan.dart';
 import '../../application/scan_providers.dart';
 
 class ScanScreen extends ConsumerWidget {
@@ -30,17 +28,7 @@ class ScanScreen extends ConsumerWidget {
     final scanState = ref.watch(scanControllerProvider);
 
     ref.listen<ScanState>(scanControllerProvider, (previous, next) {
-      if (next.status == ScanStatus.success && next.result != null && next.image != null) {
-        unawaited(
-          ref.read(scanHistoryProvider.notifier).addScan(
-                PlantScan(
-                  id: DateTime.now().microsecondsSinceEpoch.toString(),
-                  imagePath: next.image!.path,
-                  diagnosis: next.result!,
-                  scannedAt: DateTime.now(),
-                ),
-              ),
-        );
+      if (next.status == ScanStatus.success && next.result != null) {
         unawaited(
           context.push('/result', extra: next.result).then((_) {
             ref.read(scanControllerProvider.notifier).reset();
