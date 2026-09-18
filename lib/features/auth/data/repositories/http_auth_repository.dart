@@ -29,4 +29,12 @@ class HttpAuthRepository implements AuthRepository {
     final json = await _client.post('/auth/login', body: {'email': email, 'password': password});
     return _parse(json);
   }
+
+  @override
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    await _client.post(
+      '/auth/change-password',
+      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    );
+  }
 }

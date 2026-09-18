@@ -105,6 +105,37 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// Changes the current account's password — used both for a voluntary
+  /// change from the profile screen and to finish a temporary-password
+  /// reset (pass the temporary password as [currentPassword]; see
+  /// README.mobile.md "Reset / forgot password"). Clears
+  /// `mustChangePassword` on the persisted user so the forced-reset
+  /// redirect doesn't fire again.
+  Future<bool> changePassword({required String currentPassword, required String newPassword}) async {
+    final user = state.user;
+    final token = state.token;
+    if (state.status != AuthStatus.authenticated || user == null || token == null) return false;
+
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .changePassword(currentPassword: currentPassword, newPassword: newPassword);
+      final updatedUser = user.copyWith(mustChangePassword: false);
+      await ref.read(tokenStorageProvider).save(token: token, userJson: jsonEncode(updatedUser.toJson()));
+      state = AuthState.authenticated(updatedUser, token, state.biometricEmail);
+      return true;
+    } on ApiException catch (e) {
+      state = AuthState(
+        status: state.status,
+        user: state.user,
+        token: state.token,
+        biometricEmail: state.biometricEmail,
+        errorMessage: e.message,
+      );
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     await ref.read(tokenStorageProvider).clear();
     state = AuthState.unauthenticated(null, state.biometricEmail);

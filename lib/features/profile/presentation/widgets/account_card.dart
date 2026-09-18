@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -89,6 +90,15 @@ class _AccountCardState extends ConsumerState<AccountCard> {
               ),
             ),
           ],
+          const SizedBox(height: 4),
+          Divider(color: colors.divider, height: 1),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.lock_reset_rounded, color: colors.primary),
+            title: Text('Change password', style: context.textTheme.titleSmall),
+            trailing: Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+            onTap: () => context.push('/change-password'),
+          ),
           const SizedBox(height: 4),
           SizedBox(
             width: double.infinity,

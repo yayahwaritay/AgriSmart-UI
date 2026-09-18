@@ -43,6 +43,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (mounted) setState(() => _biometricSubmitting = false);
   }
 
+  // There's no self-serve reset flow (README.mobile.md "Reset / forgot
+  // password") — a buyer who's locked out has to go through support/an
+  // admin, who issues a temporary password from the admin console.
+  void _showForgotPasswordInfo() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Forgot your password?'),
+        content: const Text(
+          "We can't reset it from here yet. Contact AgriSmart support and "
+          "we'll issue you a temporary password by email — use it to log in "
+          "and you'll be asked to set a new one straight away.",
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Got it')),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.agriColors;
@@ -119,7 +139,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     validator: (value) =>
                         (value == null || value.length < 8) ? 'Password must be at least 8 characters' : null,
                   ),
-                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _showForgotPasswordInfo,
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
+                      child: Text(
+                        'Forgot password?',
+                        style: context.textTheme.labelMedium?.copyWith(color: colors.textSecondary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   _submitting
                       ? const Center(child: CircularProgressIndicator())
                       : PrimaryButton(label: 'Log in', onPressed: _submit),
