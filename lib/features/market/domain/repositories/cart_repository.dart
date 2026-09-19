@@ -1,5 +1,6 @@
 import '../entities/cart.dart';
 import '../entities/order.dart';
+import '../entities/payment_method.dart';
 
 abstract interface class CartRepository {
   Future<Cart> fetchCart();
@@ -13,6 +14,8 @@ abstract interface class CartRepository {
 
   Future<void> clearCart();
 
-  /// Places an order from the cart's contents and empties it.
-  Future<Order> checkout();
+  /// Places an order from the cart's contents and empties it. [method] must
+  /// be [PaymentMethod.cashOnPickup] or [PaymentMethod.unpaidHold] — use
+  /// `CheckoutRepository.createSession` for [PaymentMethod.monimeOnline].
+  Future<Order> checkout(PaymentMethod method);
 }

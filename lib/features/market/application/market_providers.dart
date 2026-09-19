@@ -1,15 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../data/repositories/http_cart_repository.dart';
 import '../data/repositories/http_category_repository.dart';
+import '../data/repositories/http_checkout_repository.dart';
 import '../data/repositories/http_market_repository.dart';
 import '../domain/entities/cart.dart';
+import '../domain/entities/checkout_session.dart';
 import '../domain/entities/market_category.dart';
 import '../domain/entities/market_product.dart';
 import '../domain/entities/order.dart';
+import '../domain/entities/payment_method.dart';
 import '../domain/repositories/cart_repository.dart';
 import '../domain/repositories/category_repository.dart';
+import '../domain/repositories/checkout_repository.dart';
 import '../domain/repositories/market_repository.dart';
 
 final marketRepositoryProvider = Provider<MarketRepository>((ref) {
@@ -22,6 +28,10 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
 
 final cartRepositoryProvider = Provider<CartRepository>((ref) {
   return HttpCartRepository(ref.watch(apiClientProvider));
+});
+
+final checkoutRepositoryProvider = Provider<CheckoutRepository>((ref) {
+  return HttpCheckoutRepository(ref.watch(apiClientProvider));
 });
 
 final marketProductsProvider = FutureProvider<List<MarketProduct>>((ref) {
@@ -90,10 +100,13 @@ class CartNotifier extends AsyncNotifier<Cart> {
 
   Future<void> clear() => _mutate((repo) => repo.clearCart());
 
-  Future<Order> checkout() async {
+  /// Places a cash-on-pickup or unpaid-hold order. For paying online via
+  /// Monime use [checkoutSessionControllerProvider] instead — see
+  /// README.mobile.md's "Checkout — three ways to pay".
+  Future<Order> checkout(PaymentMethod method) async {
     final repository = ref.read(cartRepositoryProvider);
     try {
-      final order = await repository.checkout();
+      final order = await repository.checkout(method);
       state = AsyncData(await repository.fetchCart());
       return order;
     } catch (e, st) {
@@ -108,3 +121,46 @@ final cartProvider = AsyncNotifierProvider<CartNotifier, Cart>(CartNotifier.new)
 final cartCountProvider = Provider<int>((ref) {
   return ref.watch(cartProvider).value?.itemCount ?? 0;
 });
+
+/// Drives the "pay online via Monime" flow: creates a checkout session
+/// against the caller's cart, then polls it every few seconds so the UI can
+/// reflect completion without waiting for an admin to reconcile it. See
+/// README.mobile.md's `POST /checkout/sessions` / `GET /checkout/sessions/{id}`.
+class CheckoutSessionController extends AsyncNotifier<CheckoutSession> {
+  Timer? _pollTimer;
+
+  @override
+  Future<CheckoutSession> build() async {
+    ref.onDispose(() => _pollTimer?.cancel());
+    final session = await ref.read(checkoutRepositoryProvider).createSession();
+    // The session is created against the cart's current contents — refresh
+    // it so the cart badge/sheet reflect that it's now spoken for.
+    ref.invalidate(cartProvider);
+    _schedulePoll(session.id);
+    return session;
+  }
+
+  void _schedulePoll(String sessionId) {
+    _pollTimer?.cancel();
+    _pollTimer = Timer(const Duration(seconds: 4), () => _poll(sessionId));
+  }
+
+  Future<void> _poll(String sessionId) async {
+    if (!ref.mounted) return;
+    try {
+      final session = await ref.read(checkoutRepositoryProvider).getSession(sessionId);
+      if (!ref.mounted) return;
+      state = AsyncData(session);
+      if (session.status == CheckoutSessionStatus.pending) {
+        _schedulePoll(sessionId);
+      }
+    } catch (_) {
+      // Transient network hiccup while polling — keep trying rather than
+      // surfacing an error over what may still be a valid, pending session.
+      if (ref.mounted) _schedulePoll(sessionId);
+    }
+  }
+}
+
+final checkoutSessionControllerProvider =
+    AsyncNotifierProvider.autoDispose<CheckoutSessionController, CheckoutSession>(CheckoutSessionController.new);

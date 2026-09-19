@@ -24,40 +24,84 @@ class TutorialsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Video Tutorials', style: context.textTheme.headlineSmall),
+                  Text(
+                    'Video Tutorials',
+                    style: context.textTheme.headlineSmall,
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     'Learn from agronomists and fellow farmers',
-                    style: context.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: videos.when(
-                data: (items) => items.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No tutorials yet — check back soon.',
-                          style: context.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () => ref.refresh(tutorialVideosProvider.future),
-                        child: ListView.separated(
+              child: RefreshIndicator(
+                onRefresh: () => ref.refresh(tutorialVideosProvider.future),
+                child: videos.when(
+                  data: (items) => items.isEmpty
+                      ? LayoutBuilder(
+                          builder: (context, constraints) => ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: constraints.maxHeight,
+                                child: Center(
+                                  child: Text(
+                                    'No tutorials yet — check back soon.',
+                                    style: context.textTheme.bodySmall
+                                        ?.copyWith(color: colors.textSecondary),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
                           itemCount: items.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 16),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 16),
                           itemBuilder: (context, index) => VideoFeedCard(
                             video: items[index],
-                            onTap: () => context.push('/tutorial', extra: items[index]),
+                            onTap: () =>
+                                context.push('/tutorial', extra: items[index]),
                           ),
                         ),
-                      ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: Text('Could not load tutorials', style: TextStyle(color: colors.accent)),
+                  loading: () => LayoutBuilder(
+                    builder: (context, constraints) => ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: constraints.maxHeight,
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  error: (e, _) => LayoutBuilder(
+                    builder: (context, constraints) => ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: constraints.maxHeight,
+                          child: Center(
+                            child: Text(
+                              'Could not load tutorials',
+                              style: TextStyle(color: colors.accent),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

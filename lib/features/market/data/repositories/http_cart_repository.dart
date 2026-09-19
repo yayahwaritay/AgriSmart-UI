@@ -1,6 +1,7 @@
 import '../../../../core/network/api_client.dart';
 import '../../domain/entities/cart.dart';
 import '../../domain/entities/order.dart';
+import '../../domain/entities/payment_method.dart';
 import '../../domain/repositories/cart_repository.dart';
 
 class HttpCartRepository implements CartRepository {
@@ -35,8 +36,9 @@ class HttpCartRepository implements CartRepository {
   }
 
   @override
-  Future<Order> checkout() async {
-    final json = await _client.post('/cart/checkout');
+  Future<Order> checkout(PaymentMethod method) async {
+    assert(method != PaymentMethod.monimeOnline, 'use CheckoutRepository.createSession for monimeOnline');
+    final json = await _client.post('/cart/checkout', body: {'paymentMethod': method.wireValue});
     return Order.fromJson(json as Map<String, dynamic>);
   }
 }

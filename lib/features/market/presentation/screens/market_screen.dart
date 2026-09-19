@@ -89,31 +89,69 @@ class MarketScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Expanded(
-              child: products.when(
-                data: (items) => items.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No products in this category yet.',
-                          style: context.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(marketProductsProvider);
+                  ref.invalidate(marketCategoriesProvider);
+                  await ref.read(marketProductsProvider.future);
+                },
+                child: products.when(
+                  data: (items) => items.isEmpty
+                      ? LayoutBuilder(
+                          builder: (context, constraints) => ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: constraints.maxHeight,
+                                child: Center(
+                                  child: Text(
+                                    'No products in this category yet.',
+                                    style: context.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.72,
+                          ),
+                          itemCount: items.length,
+                          itemBuilder: (context, index) => ProductCard(
+                            product: items[index],
+                            onAdd: () => _addToCart(context, ref, items[index]),
+                          ),
                         ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 14,
-                          crossAxisSpacing: 14,
-                          childAspectRatio: 0.72,
+                  loading: () => LayoutBuilder(
+                    builder: (context, constraints) => ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: constraints.maxHeight,
+                          child: const Center(child: CircularProgressIndicator()),
                         ),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) => ProductCard(
-                          product: items[index],
-                          onAdd: () => _addToCart(context, ref, items[index]),
+                      ],
+                    ),
+                  ),
+                  error: (e, _) => LayoutBuilder(
+                    builder: (context, constraints) => ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: constraints.maxHeight,
+                          child: Center(
+                            child: Text('Could not load the market', style: TextStyle(color: colors.accent)),
+                          ),
                         ),
-                      ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: Text('Could not load the market', style: TextStyle(color: colors.accent)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

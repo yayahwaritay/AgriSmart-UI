@@ -4,8 +4,8 @@ Audience: the **Buyer/Customer** role — browsing products, placing orders, wat
 
 Base URLs (local dev, from `Properties/launchSettings.json`):
 
-- HTTP: `http://localhost:5150`
-- HTTPS: `https://localhost:7004`
+
+- HTTPS: `https://agrismartsl.onrender.com`
 
 Interactive docs while running: `/swagger` or `/scalar/v1`.
 
@@ -165,7 +165,7 @@ One cart per customer — add products while browsing, then checkout to turn it 
 | PUT | `/cart/items/{productId}` | Buyer | Set a line item's quantity to an exact value |
 | DELETE | `/cart/items/{productId}` | Buyer | Remove one product from the cart |
 | DELETE | `/cart` | Buyer | Empty the whole cart |
-| POST | `/cart/checkout` | Buyer | Places an order from the cart's contents, then empties the cart |
+| POST | `/cart/checkout` | Buyer | Places a **cash-on-pickup or unpaid-hold** order from the cart, then empties the cart |
 
 Add item body: `{ "productId": "guid", "quantity": 1 }`
 Update item body: `{ "quantity": 2 }`
@@ -174,28 +174,145 @@ Update item body: `{ "quantity": 2 }`
 
 `CartDto`: `{ "id": "guid", "items": [CartItemDto], "totalAmount": 0 }`
 
-`POST /cart/checkout` returns an `OrderDto` (see Orders below) — same shape as `POST /orders`. It fails with `400` if the cart is empty, and `404` if a product in the cart was removed from the catalogue since it was added (remove that item first).
+`POST /cart/checkout` body: `{ "paymentMethod": "cashOnPickup" | "unpaidHold" }` — see [Checkout — three ways to pay](#checkout--three-ways-to-pay) below for what each means. **Don't send `"monimeOnline"` here** — it's rejected with `400`; use `POST /checkout/sessions` instead. Returns an `OrderDto` (see Orders below) — same shape as `POST /orders`. Fails with `400` if the cart is empty or a `monimeOnline` payment method was sent here, and `404` if a product in the cart was removed from the catalogue since it was added (remove that item first).
+
+## Checkout — three ways to pay
+
+A purchase always starts from the cart (add items, then pick one of these). All three
+place an `Order`; what differs is `paymentMethod`, whether money moves through this
+app at all, and how payment eventually gets reconciled. Full backend design:
+`MONIME-INTEGRATION-README.md`.
+
+| # | Flow | How to trigger | `paymentMethod` |
+|---|---|---|---|
+| 1 | Pay online now (card/bank/momo, incl. **Orange Money**) via Monime, then delivery | `POST /checkout/sessions` | `monimeOnline` (implicit — no cart-checkout body needed) |
+| 2 | Pay cash in person when picking up the goods | `POST /cart/checkout` or `POST /orders` | `cashOnPickup` |
+| 3 | Place the order now, unpaid — price/stock held for **24 hours only** | `POST /cart/checkout` or `POST /orders` | `unpaidHold` |
+
+For 2 and 3, show the customer plainly that #3 auto-cancels after 24 hours if unpaid
+(`holdExpiresAt` on the returned `OrderDto`) — the backend cancels it automatically
+(`status` flips to `cancelled`), there's no reminder/extension flow today.
+
+### Path 1 — Pay online via Monime — `POST /checkout/sessions`
+
+Body (both fields optional — omit entirely to use the backend's configured defaults):
+```json
+{ "successUrl": "agrismart://payment-success", "cancelUrl": "agrismart://payment-cancelled" }
+```
+Send your app's own deep links here if you want control over the post-payment
+screen; otherwise the backend's configured default success/cancel pages are used.
+
+Response `200` (`CheckoutSessionDto`):
+```json
+{
+  "id": "guid", "orderId": "guid", "monimeSessionId": "scs-...", "status": "pending",
+  "redirectUrl": "https://checkout.monime.io/...", "expireTime": "date",
+  "amount": 12500.0, "currency": "SLE"
+}
+```
+
+- Open `redirectUrl` in an in-app browser / WebView (or the system browser) — this
+  is the **entire payment experience**; the customer picks card, bank, or mobile
+  money on Monime's own hosted page (Orange Money shows up as a momo option there;
+  there's nothing special to do for it on the app side).
+- The session expires (`expireTime`, Monime's default is ~1 hour) if the customer
+  never completes payment — the underlying order stays `pending`/unpaid until an
+  admin or seller reconciles it (or, if you want the app to reflect this quickly,
+  poll it — see next).
+- Fails with `400` if the cart is empty; `400`/`502` if Monime itself rejects/can't
+  be reached (surface `message` from the error body).
+
+#### Full worked example (curl)
+
+The session is built from whatever is already in the caller's cart — there is no
+way to pass line items directly to `/checkout/sessions`. So a correct integration
+is always at least two calls: put something in the cart, then create the session.
+
+```bash
+# 1. Log in (or register) to get a Buyer JWT
+curl -X POST http://localhost:5150/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "buyer@example.com", "password": "Password123!" }'
+# -> { "token": "eyJhbGciOi...", "user": { ... } }
+
+TOKEN="eyJhbGciOi..."   # the token from the response above
+
+# 2. Add at least one product to the cart — checkout has nothing to charge without this
+curl -X POST http://localhost:5150/cart/items \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "productId": "c173cfac-2e3e-4d7b-bad6-76115eb30885", "quantity": 1 }'
+
+# 3. Create the Monime checkout session — body is optional, {} is valid
+curl -X POST http://localhost:5150/checkout/sessions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "successUrl": "agrismart://payment-success", "cancelUrl": "agrismart://payment-cancelled" }'
+# -> { "id": "...", "orderId": "...", "monimeSessionId": "scs-...", "status": "pending",
+#      "redirectUrl": "https://checkout.monime.io/scs-...", "expireTime": "...",
+#      "amount": 4500.0, "currency": "SLE" }
+```
+
+Open the response's `redirectUrl` — that's the whole payment flow from here.
+
+**Three request-shape rules that are easy to get wrong:**
+- `Authorization: Bearer <token>` is required — no anonymous/guest checkout.
+- `Content-Type: application/json` must be set on the POST, even for `{}` — a
+  request with no body/no content-type at all gets `415 Unsupported Media Type`,
+  not `400`.
+- Do **not** send `paymentMethod` here — that field belongs to `POST
+  /cart/checkout`/`POST /orders` (paths 2 & 3), not this endpoint. `successUrl`/
+  `cancelUrl` are the only two fields this endpoint reads, and both are optional.
+
+**If you get a `400`, read the `message` field — it tells you exactly what's wrong:**
+
+| `message` | Cause | Fix |
+|---|---|---|
+| `"Your cart is empty."` | Called `/checkout/sessions` before `/cart/items` succeeded, or with a token whose cart is empty | Confirm step 2 above returned `200` for the *same* token first |
+| `"Use POST /checkout/sessions to pay online via Monime — this endpoint is for cash-on-pickup or unpaid-hold orders only."` | Sent `"paymentMethod": "monimeOnline"` to `/cart/checkout` or `/orders` instead of calling `/checkout/sessions` | Call `POST /checkout/sessions` directly for the Monime path; reserve `paymentMethod` for paths 2 & 3 |
+| Anything else | Monime itself rejected the request (`400`) or couldn't be reached (`502`) | Surface the message as-is; this is not a request-shape problem on the app's side |
+
+**`GET /checkout/sessions/{id}`** — poll the caller's own session (e.g. while the
+in-app browser is open, or right after it closes) to reflect status without waiting
+for an admin. Same `CheckoutSessionDto` shape; `status` is one of `pending`,
+`completed`, `cancelled`, `expired` (Monime's own values — not the same enum as
+`OrderDto.status`). `404` if it's not the caller's own session.
+
+### Paths 2 & 3 — Cash-on-pickup / unpaid-hold — `POST /cart/checkout` or `POST /orders`
+
+Covered above — just send the right `paymentMethod`. There is no "pay now" action
+in the app for these; settlement happens in person and an admin marks it reconciled
+on the backend (see README.admin.md's Payment Reconciliation section) — nothing
+further to build on the mobile side beyond showing the order's `paymentStatus`.
 
 ## Orders — `/orders`
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| POST | `/orders` | Buyer | Place an order directly (bypassing the cart) |
+| POST | `/orders` | Buyer | Place a **cash-on-pickup or unpaid-hold** order directly (bypassing the cart) |
 | GET | `/orders` | Buyer | The caller's own orders |
 | GET | `/orders/{id}` | Buyer | The caller's own order only (404 otherwise) |
 
 Create body:
 ```json
-{ "items": [ { "productId": "guid", "quantity": 1 } ] }
+{ "items": [ { "productId": "guid", "quantity": 1 } ], "paymentMethod": "cashOnPickup" }
 ```
+`paymentMethod` is `"cashOnPickup"` or `"unpaidHold"` — sending `"monimeOnline"` here returns `400` (use `POST /checkout/sessions` for that flow instead).
 
 `OrderItemDto`: `{ "productId", "productName", "unitPrice", "quantity", "lineTotal", "sellerId", "sellerName" }`
 
 `OrderDto` (returned by POST and the "my orders" list):
 ```json
-{ "id": "guid", "userId": "guid", "items": [OrderItemDto], "totalAmount": 0, "status": "pending", "createdAt": "date" }
+{
+  "id": "guid", "userId": "guid", "items": [OrderItemDto], "totalAmount": 0,
+  "status": "pending", "createdAt": "date",
+  "paymentMethod": "monimeOnline | cashOnPickup | unpaidHold",
+  "paymentStatus": "pending | confirmed | paid",
+  "holdExpiresAt": "date | null",
+  "checkoutSessionId": "guid | null"
+}
 ```
-`status` is one of: `pending, confirmed, shipped, delivered, cancelled`.
+`status` (fulfillment) is one of: `pending, confirmed, shipped, delivered, cancelled` — **don't confuse this with `paymentStatus`** (money), which is a separate field. `holdExpiresAt` is only ever set for `unpaidHold` orders — show a countdown/expiry warning using it. `checkoutSessionId` is only set for `monimeOnline` orders; use it with `GET /checkout/sessions/{id}` to check payment progress.
 
 `GET /orders/{id}` returns an `OrderWithCustomerDto` instead (adds a `customer` object) — harmless to ignore that field client-side, or use it to show "ordered by" in an order confirmation screen.
 

@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import 'market_product.dart';
+import 'payment_method.dart';
 
+/// Fulfillment status — don't confuse with [PaymentStatus] (money), which
+/// is a separate field on [Order].
 enum OrderStatus {
   pending,
   confirmed,
@@ -11,6 +14,16 @@ enum OrderStatus {
 
   static OrderStatus fromJson(String value) {
     return OrderStatus.values.firstWhere((s) => s.name == value, orElse: () => OrderStatus.pending);
+  }
+}
+
+enum PaymentStatus {
+  pending,
+  confirmed,
+  paid;
+
+  static PaymentStatus fromJson(String value) {
+    return PaymentStatus.values.firstWhere((s) => s.name == value, orElse: () => PaymentStatus.pending);
   }
 }
 
@@ -56,6 +69,10 @@ class Order {
     required this.totalAmount,
     required this.status,
     required this.createdAt,
+    required this.paymentMethod,
+    required this.paymentStatus,
+    this.holdExpiresAt,
+    this.checkoutSessionId,
   });
 
   final String id;
@@ -64,6 +81,17 @@ class Order {
   final double totalAmount;
   final OrderStatus status;
   final DateTime createdAt;
+  final PaymentMethod paymentMethod;
+  final PaymentStatus paymentStatus;
+
+  /// Only set for `unpaidHold` orders — the 24-hour price/stock hold expiry.
+  /// The backend auto-cancels the order (flips [status] to `cancelled`) once
+  /// this passes; there's no reminder/extension flow.
+  final DateTime? holdExpiresAt;
+
+  /// Only set for `monimeOnline` orders — pair with
+  /// `GET /checkout/sessions/{id}` to check payment progress.
+  final String? checkoutSessionId;
 
   String get totalLabel => formatNaira(totalAmount);
 
@@ -75,6 +103,10 @@ class Order {
       totalAmount: (json['totalAmount'] as num).toDouble(),
       status: OrderStatus.fromJson(json['status'] as String),
       createdAt: DateTime.parse(json['createdAt'] as String),
+      paymentMethod: PaymentMethod.fromJson(json['paymentMethod'] as String),
+      paymentStatus: PaymentStatus.fromJson(json['paymentStatus'] as String),
+      holdExpiresAt: json['holdExpiresAt'] != null ? DateTime.parse(json['holdExpiresAt'] as String) : null,
+      checkoutSessionId: json['checkoutSessionId'] as String?,
     );
   }
 }

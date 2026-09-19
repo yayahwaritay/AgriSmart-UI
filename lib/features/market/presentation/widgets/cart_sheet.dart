@@ -8,6 +8,9 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../application/market_providers.dart';
 import '../../domain/entities/cart.dart';
+import '../../domain/entities/payment_method.dart';
+import 'monime_checkout_sheet.dart';
+import 'payment_method_sheet.dart';
 
 /// Opens the cart as a floating Liquid Glass bottom sheet with quantity
 /// steppers, the order total, and checkout.
@@ -34,15 +37,29 @@ class _CartSheetState extends ConsumerState<CartSheet> {
   bool _checkingOut = false;
 
   Future<void> _checkout() async {
+    final method = await showPaymentMethodSheet(context);
+    if (method == null || !mounted) return;
+
+    if (method == PaymentMethod.monimeOnline) {
+      // Stacks on top of this sheet rather than replacing it, so the cart
+      // (now spoken for by the session) is right there once payment closes.
+      await showMonimeCheckoutSheet(context);
+      return;
+    }
+
     setState(() => _checkingOut = true);
     try {
-      final order = await ref.read(cartProvider.notifier).checkout();
+      final order = await ref.read(cartProvider.notifier).checkout(method);
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('Order placed 🎉 ${order.totalLabel} · ${order.status.name}'),
+          content: Text(
+            method == PaymentMethod.unpaidHold
+                ? 'Order placed 🎉 ${order.totalLabel} · held 24h, unpaid'
+                : 'Order placed 🎉 ${order.totalLabel} · ${order.status.name}',
+          ),
         ),
       );
     } on ApiException catch (e) {
