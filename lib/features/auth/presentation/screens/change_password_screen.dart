@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../application/auth_providers.dart';
 import '../widgets/auth_text_field.dart';
@@ -81,6 +82,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const Center(child: AppLogo(size: 64)),
+                  const SizedBox(height: 16),
                   Text(
                     forced ? 'Set a new password' : 'Change password',
                     style: context.textTheme.headlineSmall,

@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_logo.dart';
+import '../../../../core/widgets/app_menu_button.dart';
+import '../../../../core/widgets/app_sidebar.dart';
 import '../../../../core/widgets/glass_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/scan_viewfinder.dart';
@@ -42,6 +45,7 @@ class ScanScreen extends ConsumerWidget {
     });
 
     return Scaffold(
+      drawer: const AppSidebar(),
       body: SafeArea(
         child: Column(
           children: [
@@ -50,7 +54,13 @@ class ScanScreen extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Scan', style: context.textTheme.headlineSmall),
+                  Row(
+                    children: [
+                      const AppMenuButton(),
+                      const SizedBox(width: 12),
+                      Text('Scan', style: context.textTheme.headlineSmall),
+                    ],
+                  ),
                   if (scanState.image != null && scanState.status != ScanStatus.diagnosing)
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
@@ -96,11 +106,7 @@ class _ScanActions extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          const AppLogoLoader(size: 32),
           const SizedBox(width: 12),
           Text('Analyzing leaf...', style: context.textTheme.bodyMedium),
         ],

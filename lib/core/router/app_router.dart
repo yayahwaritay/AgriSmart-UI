@@ -7,6 +7,17 @@ import '../../features/auth/presentation/screens/change_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/fertilizer/presentation/screens/fertilizer_detail_screen.dart';
+import '../../features/fertilizer/presentation/screens/fertilizer_history_screen.dart';
+import '../../features/fertilizer/presentation/screens/fertilizer_result_screen.dart';
+import '../../features/fertilizer/presentation/screens/fertilizer_screen.dart';
+import '../../features/harvest/domain/entities/crop.dart';
+import '../../features/harvest/domain/entities/harvest_prediction.dart';
+import '../../features/harvest/presentation/screens/crop_detail_screen.dart';
+import '../../features/harvest/presentation/screens/crops_screen.dart';
+import '../../features/harvest/presentation/screens/harvest_detail_screen.dart';
+import '../../features/harvest/presentation/screens/harvest_history_screen.dart';
+import '../../features/harvest/presentation/screens/harvest_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/market/presentation/screens/market_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -98,6 +109,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/tutorial',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => VideoDetailScreen(initialVideo: state.extra as TutorialVideo),
+      ),
+      GoRoute(
+        path: '/crops',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CropsScreen(),
+      ),
+      GoRoute(
+        path: '/crops/detail',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => CropDetailScreen(crop: state.extra as CropSummary),
+      ),
+      GoRoute(
+        path: '/harvest',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => HarvestScreen(initialCrop: state.extra as CropSummary?),
+      ),
+      GoRoute(
+        path: '/harvest/history',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const HarvestHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/harvest/detail',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => HarvestDetailScreen(prediction: state.extra as HarvestPrediction),
+      ),
+      GoRoute(
+        path: '/fertilizer',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const FertilizerScreen(),
+      ),
+      GoRoute(
+        path: '/fertilizer/result',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const FertilizerResultScreen(),
+      ),
+      GoRoute(
+        path: '/fertilizer/history',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const FertilizerHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/fertilizer/detail',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => FertilizerDetailScreen(recommendationId: state.extra as String),
       ),
     ],
   );

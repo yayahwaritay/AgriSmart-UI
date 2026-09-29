@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/glass_card.dart';
 
 class AboutCard extends StatelessWidget {
@@ -17,8 +18,8 @@ class AboutCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.eco_rounded, color: colors.primary),
-              const SizedBox(width: 10),
+              const AppLogo(size: 40, elevated: false),
+              const SizedBox(width: 12),
               Text('AgriSmart', style: context.textTheme.titleMedium),
             ],
           ),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_menu_button.dart';
+import '../../../../core/widgets/app_sidebar.dart';
 import '../../application/tutorial_providers.dart';
 import '../widgets/video_feed_card.dart';
 
@@ -15,24 +17,33 @@ class TutorialsScreen extends ConsumerWidget {
     final videos = ref.watch(tutorialVideosProvider);
 
     return Scaffold(
+      drawer: const AppSidebar(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'Video Tutorials',
-                    style: context.textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Learn from agronomists and fellow farmers',
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
+                  const AppMenuButton(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Video Tutorials',
+                          style: context.textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Learn from agronomists and fellow farmers',
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/glass_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../application/auth_providers.dart';
@@ -80,7 +81,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('AgriSmart 🌱', style: context.textTheme.headlineSmall, textAlign: TextAlign.center),
+                  const Center(child: FloatingAppLogo(size: 104)),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Welcome to AgriSmart',
+                    style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     'Log in to browse the market and scan your crops.',

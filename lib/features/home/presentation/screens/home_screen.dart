@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_logo.dart';
+import '../../../../core/widgets/app_menu_button.dart';
+import '../../../../core/widgets/app_sidebar.dart';
 import '../../../../core/widgets/neu_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/stat_card.dart';
@@ -22,6 +25,7 @@ class HomeScreen extends ConsumerWidget {
     final history = ref.watch(scanHistoryProvider);
 
     return Scaffold(
+      drawer: const AppSidebar(),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -33,16 +37,31 @@ class HomeScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
             children: [
-              Text(
-                'Good to see you 🌱',
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Your fields, at a glance',
-                style: context.textTheme.headlineSmall,
+              Row(
+                children: [
+                  const AppMenuButton(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Good to see you 🌱',
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Your fields, at a glance',
+                          style: context.textTheme.headlineSmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const AppLogo(size: 44),
+                ],
               ),
               const SizedBox(height: 20),
               stats.when(
@@ -111,6 +130,38 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.camera_alt_rounded,
                       expand: false,
                       onPressed: () => context.push('/scan'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              NeuCard(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'When should I harvest?',
+                            style: context.textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Pick a crop and planting date for an expected harvest window.',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    PrimaryButton(
+                      label: 'Predict',
+                      icon: Icons.query_stats_rounded,
+                      expand: false,
+                      onPressed: () => context.push('/crops'),
                     ),
                   ],
                 ),

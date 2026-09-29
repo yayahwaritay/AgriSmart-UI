@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../application/auth_providers.dart';
 import '../widgets/auth_text_field.dart';
@@ -59,6 +60,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const Center(child: FloatingAppLogo(size: 76)),
+                  const SizedBox(height: 16),
                   Text('Create your account', style: context.textTheme.headlineSmall, textAlign: TextAlign.center),
                   const SizedBox(height: 6),
                   Text(

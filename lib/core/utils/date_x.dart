@@ -14,4 +14,22 @@ extension DateFormatX on DateTime {
     ];
     return '${months[month - 1]} $day';
   }
+
+  /// "2026-06-01" — the `yyyy-MM-dd` shape the API expects for date-only
+  /// fields (e.g. `plantingDate`), without pulling in `intl`.
+  String toIsoDate() {
+    final m = month.toString().padLeft(2, '0');
+    final d = day.toString().padLeft(2, '0');
+    return '$year-$m-$d';
+  }
+
+  /// "Jun 1, 2026" — a short absolute date label for e.g. a planting-date
+  /// field or a harvest window.
+  String toShortDateLabel() {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[month - 1]} $day, $year';
+  }
 }

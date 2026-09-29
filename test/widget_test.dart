@@ -1,5 +1,6 @@
 import 'package:agrismart/app.dart';
 import 'package:agrismart/core/network/token_storage.dart';
+import 'package:agrismart/core/widgets/app_logo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,9 +39,14 @@ void main() {
         child: const AgriSmartApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    // The login logo floats on a repeating animation, so pumpAndSettle would
+    // never settle — step past the splash intro and route transition instead.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
 
-    expect(find.text('AgriSmart 🌱'), findsOneWidget);
+    expect(find.text('Welcome to AgriSmart'), findsOneWidget);
+    expect(find.byType(AppLogo), findsOneWidget);
     expect(find.text('Log in'), findsOneWidget);
     expect(find.text("Don't have an account? Sign up"), findsOneWidget);
   });

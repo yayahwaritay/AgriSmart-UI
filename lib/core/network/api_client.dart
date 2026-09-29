@@ -38,20 +38,12 @@ class ApiClient {
       return jsonDecode(response.body);
     }
 
-    var message = 'Something went wrong (${response.statusCode}).';
-    try {
-      final body = jsonDecode(response.body);
-      if (body is Map && body['message'] is String) {
-        message = body['message'] as String;
-      }
-    } catch (_) {
-      // Non-JSON error body — fall back to the generic message above.
-    }
+    final exception = ApiException.fromResponseBody(response.statusCode, response.body);
 
     if (response.statusCode == 401) {
       _ref.read(authControllerProvider.notifier).forceLogout();
     }
-    throw ApiException(message, response.statusCode);
+    throw exception;
   }
 
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {

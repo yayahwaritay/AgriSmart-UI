@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/app_menu_button.dart';
+import '../../../../core/widgets/app_sidebar.dart';
 import '../../application/market_providers.dart';
 import '../../domain/entities/market_product.dart';
 import '../widgets/cart_sheet.dart';
@@ -37,6 +39,7 @@ class MarketScreen extends ConsumerWidget {
     final categories = ref.watch(marketCategoriesProvider);
 
     return Scaffold(
+      drawer: const AppSidebar(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,6 +48,8 @@ class MarketScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Row(
                 children: [
+                  const AppMenuButton(),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
