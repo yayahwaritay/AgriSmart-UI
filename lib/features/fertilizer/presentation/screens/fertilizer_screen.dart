@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/crop_image.dart';
 import '../../../../core/widgets/neu_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../application/fertilizer_providers.dart';
@@ -34,7 +35,11 @@ class _FertilizerScreenState extends ConsumerState<FertilizerScreen> {
       final crops = await ref.read(fertilizerCropsProvider.future);
       if (!mounted) return;
       setState(() => _loadingCrops = false);
-      final crop = await showFertilizerCropPickerSheet(context, crops);
+      final crop = await showFertilizerCropPickerSheet(
+        context,
+        crops,
+        selected: ref.read(fertilizerCalculatorControllerProvider).crop,
+      );
       if (crop != null) ref.read(fertilizerCalculatorControllerProvider.notifier).selectCrop(crop);
     } catch (_) {
       if (!mounted) return;
@@ -102,14 +107,15 @@ class _FertilizerScreenState extends ConsumerState<FertilizerScreen> {
             ),
             const SizedBox(height: 16),
             NeuCard(
+              padding: const EdgeInsets.all(12),
               onTap: _loadingCrops ? null : _pickCrop,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(crop?.isPerennial ?? false ? Icons.park_rounded : Icons.grass_rounded, color: colors.primary),
-                      const SizedBox(width: 12),
+                      CropImage(cropId: crop?.id ?? '', size: 56, fallbackIcon: fertilizerCropIcon(crop)),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

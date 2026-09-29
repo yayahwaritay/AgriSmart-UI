@@ -38,6 +38,7 @@ flutter:
 
   assets:
     - assets/branding/logo_mark.png
+    - assets/images/crops/
 
 # Home-screen icon on every platform. Regenerate after changing the artwork:
 #   dart run flutter_launcher_icons

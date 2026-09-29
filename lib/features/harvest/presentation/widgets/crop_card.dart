@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/crop_image.dart';
 import '../../../../core/widgets/neu_card.dart';
 import '../../domain/entities/crop.dart';
 
@@ -15,22 +16,11 @@ class CropCard extends StatelessWidget {
     final colors = context.agriColors;
 
     return NeuCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       onTap: onTap,
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [colors.primary.withValues(alpha: 0.28), colors.primary.withValues(alpha: 0.10)],
-              ),
-            ),
-            child: Icon(Icons.grass_rounded, color: colors.primary, size: 22),
-          ),
+          Hero(tag: 'crop-image-${crop.id}', child: CropImage(cropId: crop.id, size: 64)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

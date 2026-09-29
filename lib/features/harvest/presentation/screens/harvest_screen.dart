@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
 import '../../../../core/utils/date_x.dart';
+import '../../../../core/widgets/crop_image.dart';
 import '../../../../core/widgets/glass_button.dart';
 import '../../../../core/widgets/neu_card.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -66,7 +67,11 @@ class _HarvestScreenState extends ConsumerState<HarvestScreen> {
   Future<void> _pickCrop() async {
     final crops = await ref.read(cropsProvider.future);
     if (!mounted) return;
-    final crop = await showCropPickerSheet(context, crops);
+    final crop = await showCropPickerSheet(
+      context,
+      crops,
+      selected: ref.read(harvestPredictionControllerProvider).crop,
+    );
     if (crop != null) {
       ref.read(harvestPredictionControllerProvider.notifier).selectCrop(crop);
     }
@@ -125,14 +130,25 @@ class _HarvestScreenState extends ConsumerState<HarvestScreen> {
             const SizedBox(height: 16),
             NeuCard(
               onTap: _pickCrop,
+              padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  Icon(Icons.grass_rounded, color: colors.primary),
-                  const SizedBox(width: 12),
+                  CropImage(cropId: formState.crop?.id ?? '', size: 56),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: Text(
-                      formState.crop?.name ?? 'Choose a crop',
-                      style: context.textTheme.bodyMedium,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          formState.crop == null ? 'Crop' : 'Crop · ~${formState.crop!.typicalDaysToMaturity} days',
+                          style: context.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          formState.crop?.name ?? 'Choose a crop',
+                          style: context.textTheme.titleMedium,
+                        ),
+                      ],
                     ),
                   ),
                   Icon(Icons.chevron_right_rounded, color: colors.textSecondary),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/build_context_x.dart';
+import '../../../../core/widgets/crop_image.dart';
 import '../../../../core/widgets/neu_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../domain/entities/crop.dart';
@@ -22,6 +23,8 @@ class CropDetailScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
           children: [
+            Hero(tag: 'crop-image-${crop.id}', child: CropImage.banner(cropId: crop.id)),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
